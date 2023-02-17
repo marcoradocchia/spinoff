@@ -17,11 +17,11 @@ sp.success("Success!");
 
 ### Spinners
 
-This crate provides 80+ spinners out of the box, which you can find in the 
+This crate provides 80+ spinners out of the box, which you can find in the
 [`spinners`] module.
 
-Each spinner provided in this crate is broken up into its own feature. For 
-example, if you want to use the `dots9` spinner, you need to enable the `dots9` 
+Each spinner provided in this crate is broken up into its own feature. For
+example, if you want to use the `dots9` spinner, you need to enable the `dots9`
 feature in your `Cargo.toml` (the `dots` feature is enabled by default).
 
 If you want to use a custom spinner, you can use the [`spinner!`] macro.
@@ -64,8 +64,9 @@ mod utils;
 
 use spinners::SpinnerFrames;
 pub use streams::Streams;
+pub use utils::colorize;
+use utils::delete_last_line;
 pub use utils::Color;
-use utils::{colorize, delete_last_line};
 
 /// Terminal spinner.
 pub struct Spinner {
@@ -208,9 +209,9 @@ impl Spinner {
                         .flush()
                         .expect("error: failed to flush stream");
 
-                    thread::sleep(std::time::Duration::from_millis(
-                        u64::from(spinner_frames.interval)
-                    ));
+                    thread::sleep(std::time::Duration::from_millis(u64::from(
+                        spinner_frames.interval,
+                    )));
                 }
                 delete_last_line(last_length, stream);
             }
@@ -288,14 +289,25 @@ impl Spinner {
     #
     let sp = Spinner::new(spinners::Mindblown, "Guess what's coming...", None);
     sleep(Duration::from_millis(800));
-    sp.stop_and_persist("🍕", "Pizza!");
+    sp.stop_and_persist("🍕", None, "Pizza!");
     #
     ```
 
+    Example of colored symbol:
+    ```
+    # use spinoff::{spinners, Spinner};
+    # use std::thread::sleep;
+    # use std::time::Duration;
+    #
+    let sp = Spinner::new(spinners::Mindblown, "Processing...", None);
+    sleep(Duration::from_millis(800));
+    sp.stop_and_persist("✔", Some(Color::Green), "Completed!");
+    ```
+
     */
-    pub fn stop_and_persist(mut self, symbol: &str, msg: &str) {
+    pub fn stop_and_persist(mut self, symbol: &str, symbol_color: Option<Color>, msg: &str) {
         self.stop_spinner_thread();
-        writeln!(self.stream, "{symbol} {msg}");
+        writeln!(self.stream, "{} {msg}", colorize(symbol_color, symbol).bold());
     }
 
     /**
@@ -307,7 +319,7 @@ impl Spinner {
     # use spinoff::{spinners, Spinner};
     # use std::thread::sleep;
     # use std::time::Duration;
-    # 
+    #
     let sp = Spinner::new(spinners::Aesthetic, "Trying to load information...", None);
     sleep(Duration::from_millis(800));
     sp.success("Success!");
@@ -317,7 +329,12 @@ impl Spinner {
     */
     pub fn success(mut self, msg: &str) {
         self.stop_spinner_thread();
-        writeln!(self.stream, "{} {}", colorize(Some(Color::Green), "✓").bold(), msg);
+        writeln!(
+            self.stream,
+            "{} {}",
+            colorize(Some(Color::Green), "✓").bold(),
+            msg
+        );
     }
 
     /**
@@ -339,7 +356,12 @@ impl Spinner {
     */
     pub fn fail(mut self, msg: &str) {
         self.stop_spinner_thread();
-        writeln!(self.stream, "{} {}", colorize(Some(Color::Red), "✗").bold(), msg);
+        writeln!(
+            self.stream,
+            "{} {}",
+            colorize(Some(Color::Red), "✗").bold(),
+            msg
+        );
     }
 
     /**
@@ -361,7 +383,12 @@ impl Spinner {
     */
     pub fn warn(mut self, msg: &str) {
         self.stop_spinner_thread();
-        writeln!(self.stream, "{} {}", colorize(Some(Color::Yellow), "⚠").bold(), msg);
+        writeln!(
+            self.stream,
+            "{} {}",
+            colorize(Some(Color::Yellow), "⚠").bold(),
+            msg
+        );
     }
     /**
     Deletes the last line of the terminal and prints an info symbol with a message.
@@ -382,7 +409,12 @@ impl Spinner {
     */
     pub fn info(mut self, msg: &str) {
         self.stop_spinner_thread();
-        writeln!(self.stream, "{} {}", colorize(Some(Color::Blue), "ℹ").bold(), msg);
+        writeln!(
+            self.stream,
+            "{} {}",
+            colorize(Some(Color::Blue), "ℹ").bold(),
+            msg
+        );
     }
 
     /**
@@ -474,13 +506,18 @@ impl Spinner {
     */
     pub fn update_after_time<T>(&mut self, updated_msg: T, duration: Duration)
     where
-        T: Into<Cow<'static, str>>
+        T: Into<Cow<'static, str>>,
     {
         sleep(duration);
         self.stop_spinner_thread();
         let _replaced = std::mem::replace(
             self,
-            Self::new_with_stream(self.spinner_frames.clone(), updated_msg, self.color, self.stream),
+            Self::new_with_stream(
+                self.spinner_frames.clone(),
+                updated_msg,
+                self.color,
+                self.stream,
+            ),
         );
     }
     /**
